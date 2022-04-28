@@ -1,0 +1,1029 @@
+Q1. Write a program to create 5 child processes of a parent process using fork. Print the pids and
+ppids of all the processes.
+
+
+-----------------------------------------------------------------------------------------------------------------------
+
+#include <stdio.h>
+#include <sys/wait.h>
+#include <unistd.h>
+#include <stdlib.h>
+
+int main()
+{
+	for(int i=0;i<5;i++)
+	{
+		if(fork() == 0)
+		{
+			printf("[child Process %d] pid :%d , from [parent] pid :%d\n",
+					i+1,getpid(),getppid());
+			exit(0);
+		}
+	}
+	for(int i=0;i<5;i++) wait(NULL);
+}
+
+-----------------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+Q2. Create 2 programs: a client program who sorts 10 numbers using any sort algorithm and a sever
+program who forks a child process and then executes the client using execvp command.
+
+-----------------------------------------------------------------------------------------------------------------------
+//----------parent.c-------
+
+#include <stdio.h>
+#include <unistd.h>
+#include <sys/wait.h>
+
+int main()
+{
+	char *args[] = {"./sort", NULL};
+	printf("Driver program [pid : %d]\n",getpid());
+
+	printf("Creating child process using fork()...\n");
+	
+	int c = fork();
+	if(c != 0) 
+		printf("child process created [pid : %d] with parent [pid : %d]\n", c, getpid());
+	if (c == 0)
+	{
+		//child process... calling sort.c using execvp
+		int status_code = execvp(args[0],args);
+	}
+	else
+	{
+		wait(NULL);
+		printf("Back in the driver program [pid : %d]\n",getpid());
+	}
+}
+
+//---------sort.c----------
+
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+
+// sorting function
+void insertionSort(int arr[], int n)
+{
+	int i, key, j;
+	for (i = 1; i < n; i++)
+	{
+		key = arr[i];
+		j = i - 1;
+		while (j >= 0 && arr[j] > key)
+		{
+			arr[j + 1] = arr[j];
+			j = j - 1;
+		}
+		arr[j + 1] = key;
+	}
+}
+
+int main(int args, char **argv)
+{
+	printf("Now we are in the client program [pid : %d]\n\n", getpid());
+	printf("Enter Array size:\n");
+	int n;
+	scanf("%d",&n);
+	int arr[n];
+	for(int i=0;i<n;i++)
+		scanf("%d",&arr[i]);
+
+	printf("Array before sorting\n");
+	for (int i = 0; i < n; i++)
+	{
+		printf("%d  ", arr[i]);
+	}
+	printf("\n\n");
+	
+	// sorting the array
+	insertionSort(arr, n);
+
+	printf("Array after sorting\n");
+	for (int i = 0; i < n; i++)
+	{
+		printf("%d  ", arr[i]);
+	}
+	printf("\n");
+	return 0;
+}
+
+
+
+-----------------------------------------------------------------------------------------------------------------------
+
+
+
+Q3. Implement Round Robin Scheduling algorithm taking the time slice as 2 ms. Implement it using
+queue data structure: read the process number, its entering time and its CPU burst time and store
+them in a queue data structure called ready queue. Take at least 4 processes and find the average
+waiting time and average turnaround time for each process.
+
+
+
+-----------------------------------------------------------------------------------------------------------------------
+
+
+#include<stdio.h>
+
+int main()
+{
+
+	int count,j,n,time,remain,flag=0,time_quantum;
+	int wait_time=0,turnaround_time=0,at[10],bt[10],rt[10];
+	printf("Enter Total Process:\t ");
+	scanf("%d",&n);
+	remain=n;
+	for(count=0;count<n;count++)
+	{
+		printf("Enter Arrival Time and Burst Time for Process Process Number %d :",count+1);
+		scanf("%d",&at[count]);
+		scanf("%d",&bt[count]);
+		rt[count]=bt[count];
+	}
+	printf("Enter Time Quantum:\t");
+	scanf("%d",&time_quantum);
+	printf("\n\nProcess\t|Turnaround Time|Waiting Time\n\n");
+	for(time=0,count=0;remain!=0;)
+	{
+		if(rt[count]<=time_quantum && rt[count]>0)
+		{
+			time+=rt[count];
+			rt[count]=0;
+			flag=1;
+		}
+		else if(rt[count]>0)
+		{
+			rt[count]-=time_quantum;
+			time+=time_quantum;
+		}
+		if(rt[count]==0 && flag==1)
+		{
+			remain--;
+			printf("P[%d]\t|\t%d\t|\t%d\n",count+1,time-at[count],time-at[count]-bt[count]);
+			wait_time+=time-at[count]-bt[count];
+			turnaround_time+=time-at[count];
+			flag=0;
+		}
+		if(count==n-1)
+			count=0;
+		else if(at[count+1]<=time)
+			count++;
+		else
+			count=0;
+	}
+	printf("\nAverage Waiting Time= %f\n",wait_time*1.0/n);
+	printf("Avg Turnaround Time = %f",turnaround_time*1.0/n);
+
+	return 0;
+}
+
+
+-----------------------------------------------------------------------------------------------------------------------
+
+
+Q4. Implement the Priority Scheduling algorithm with pre-emption. Implement it using priority
+queue data structure: read the process number, its entering time, its priority and its CPU burst time.
+Take at least 6 processes and find the average waiting time and average turnaround time for each
+process.
+
+
+
+-----------------------------------------------------------------------------------------------------------------------
+#include <stdio.h>
+
+int main()
+{
+	int bt[20], p[20], wt[20], tat[20], pr[20], i, j, n, total = 0, pos, temp, avg_wt, avg_tat;
+	printf("Enter Total Number of Process:");
+	scanf("%d", &n);
+
+	printf("\nEnter Burst Time and Priority\n");
+	for (i = 0; i < n; i++)
+	{
+		printf("\nP[%d]\n", i + 1);
+		printf("Burst Time:");
+		scanf("%d", &bt[i]);
+		printf("Priority:");
+		scanf("%d", &pr[i]);
+		p[i] = i + 1; 
+	}
+
+	for (i = 0; i < n; i++)
+	{
+		pos = i;
+		for (j = i + 1; j < n; j++)
+		{
+			if (pr[j] < pr[pos])
+				pos = j;
+		}
+
+		temp = pr[i];
+		pr[i] = pr[pos];
+		pr[pos] = temp;
+
+		temp = bt[i];
+		bt[i] = bt[pos];
+		bt[pos] = temp;
+
+		temp = p[i];
+		p[i] = p[pos];
+		p[pos] = temp;
+	}
+
+	wt[0] = 0;
+
+	for (i = 1; i < n; i++)
+	{
+		wt[i] = 0;
+		for (j = 0; j < i; j++)
+			wt[i] += bt[j];
+
+		total += wt[i];
+	}
+
+	avg_wt = total / n; 
+	total = 0;
+
+	printf("\nProcess\t    Burst Time    \tWaiting Time\tTurnaround Time");
+	for (i = 0; i < n; i++)
+	{
+		tat[i] = bt[i] + wt[i]; 
+		total += tat[i];
+		printf("\nP[%d]\t\t  %d\t\t    %d\t\t\t%d", p[i], bt[i], wt[i], tat[i]);
+	}
+
+	avg_tat = total / n;
+	printf("\n\nAverage Waiting Time=%d", avg_wt);
+	printf("\nAverage Turnaround Time=%d\n", avg_tat);
+
+	return 0;
+}
+
+
+-----------------------------------------------------------------------------------------------------------------------
+
+
+
+Q5. Write a program using fork() and pipe() where one child process sends a message from one pipe
+to another child process and then returns a new message acknowledging the first message through
+another pipe to first child process.
+
+
+-----------------------------------------------------------------------------------------------------------------------
+
+#include <unistd.h>
+#include <stdio.h>
+#define msg_size 30
+
+int main()  {
+    int p[2];
+    // initialise pipe
+    pipe(p);
+
+    int f = fork();
+    // if this is the parent process
+    if (f)  {
+        char *msg = "hello world!";
+        // write message
+        write(p[1], msg, msg_size);
+        printf("Message sent from child process.\n");
+    }
+    // child process
+    else    {
+        // receive the message
+        char buffer[msg_size];
+        read(p[0], buffer, msg_size);
+        printf("Message received to the parent process is: %s\n", buffer);
+    }
+    return 0;
+}
+-----------------------------------------------------------------------------------------------------------------------
+
+
+
+Q6. Consider a system with n processes Pli] where i=(1,2,....n) and &quot;j resources R[j] where j=(1,2,3,
+....,m), a matrix MAX[i][j]=k means Pi may request at most k instances of resource type Rj. A matrix
+Alloc[i][j] represents the number of resources of each type currently allocated to each process and
+Available[j] = k means: there are &#39;k&#39; instances of resource type Rj available. Implement BANKER&#39;s
+algorithm and write an interactive program which avoids Deadlock in the system. Your program
+should read all the current matrices at time t=0. A process may request for certain resources. Read
+the request vector and then display whether the request can be granted or not.
+
+-----------------------------------------------------------------------------------------------------------------------
+
+#include <iostream>
+using namespace std;
+
+int n, m;
+
+int MAX[100][100], Alloc[100][100], Available[100];
+
+bool possible (int p, int resources[][2], int numr)  {
+    for (int r = 0; r < numr; ++r)  {
+        int ri = resources[r][0];
+        if (Alloc[p][ri] + resources[r][1] > MAX[p][ri] || Available[ri] < resources[r][1])
+            return false;
+    }
+
+    return true;
+}
+
+int main () {
+    printf("Number of processes: ");
+    cin >> n;
+    printf("Number of resources: ");
+    cin >> m;
+
+    printf("Enter the MAX matrix (n * m)\n");
+    for (int i = 0; i < n; ++i)
+        for (int j = 0; j < m; ++j)
+            cin >> MAX[i][j];
+
+    printf("Enter the Alloc matrix (n * m)\n");
+    for (int i = 0; i < n; ++i)
+        for (int j = 0; j < m; ++j)
+            cin >> Alloc[i][j];
+
+    printf("Enter the Available vector (1 * m)");
+    for (int j = 0; j < m; ++j)
+        cin >> Available[j];
+    
+    printf("Enter requests: (0 based indexing)\n");
+    while (1)   {
+        int pid, numr;
+        printf("PID: ");
+        scanf("%d", &pid);
+        printf("Resources process %d requires: ", pid);
+        scanf("%d", &numr);
+        int resources[numr][2];
+        for (int r = 0; r < numr; ++r)  {
+            printf("Resource id and instances #%d: ", r+1);
+            scanf("%d %d", &resources[r][0], &resources[r][1]);
+        }
+        if (possible(pid, resources, numr))
+            printf("Granted.\n");
+        else
+            printf("Not granted.\n");
+    }
+}
+
+
+-----------------------------------------------------------------------------------------------------------------------
+
+
+Q7. Write a program to simulate Producer Consumer problem using semaphores. Use a fixed size
+buffer to implement. You will ask user the choice of produce or consume and then give appropriate
+message like: produced and showing the updated buffer, buffer full, buffer empty, consumed the
+item and showing the updated buffer after that.
+
+
+-----------------------------------------------------------------------------------------------------------------------
+
+#include <iostream>
+#define BUF_SIZE 10
+
+class Semaphore {
+    bool b;
+public:
+    Semaphore() {
+        b = 1;
+    }
+
+    void wait() {
+        while (!b);
+        b = 0;
+    }
+
+    void signal()   {
+        while (b);
+        b = 1;
+    }
+} mutex;
+
+class Buffer    {
+    int i, j, buf[BUF_SIZE+1], N;
+public:
+    Buffer()    {
+        N = BUF_SIZE + 1;
+        i = 0;
+        j = 0;
+    }
+
+    bool isEmpty()  {
+        return i == j;
+    }
+
+    bool isFull()   {
+        return (j+1) % N == i;
+    }
+
+    int consume()   {
+        int ret = buf[i++];
+        if (i == N) i = 0;
+        return ret;
+    }
+
+    void produce(int p) {
+        buf[j++] = p;
+        if (j == N) j = 0;
+    }
+
+    void show() {
+        printf("Buffer: ");
+        for (int k = i; k != j; k = (k + 1) % N)
+            printf("%d ", buf[k]);
+        printf("\n");
+    }
+} buffer;
+
+// Produce an item
+void Producer(int product) {
+    if (buffer.isFull())    {
+        printf("Buffer is full.\n");
+        return;
+    }
+    mutex.wait();
+    buffer.produce(product);
+    mutex.signal();
+    printf("Produced item.\n");
+    buffer.show();
+}
+
+// Consume an item
+void Consumer() {
+    if (buffer.isEmpty())   {
+        printf("Buffer is empty\n");
+        return;
+    }
+    mutex.wait();
+    int product = buffer.consume();
+    mutex.signal();
+    printf("Consumed item: %d\n", product);
+    buffer.show();
+}
+
+int main()  {
+    printf("Type 'c' for consuming an item.\nType 'p' for producing an item\n");
+    while (1)   {
+        char ch;
+        std::cin >> ch;
+        if (ch == 'c')
+            Consumer();
+        else    {
+            int val;
+            printf("Enter the value for the product: ");
+            std::cin >> val;
+            Producer(val);
+        }
+    }
+    return 0;
+}
+
+
+-----------------------------------------------------------------------------------------------------------------------
+
+
+
+Q8. Write a program to simulate reader writer problem. You can use a global array or a file which
+different processes/threads would like to read and modify. Take three processes for synchronization.
+Each will ask the user whether they want to read or write, after performing the operation, show the
+read data or the modified data.
+
+
+-----------------------------------------------------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------------------------------------------------
+
+
+Q9. Implement the memory management with fixed partitioning. You have to ask the user for total
+memory, size of OS, size of partitions, number of processes and memory requirement for each
+process. Allocate the memory accordingly.
+
+-----------------------------------------------------------------------------------------------------------------------
+#include <bits/stdc++.h>
+using namespace std;
+
+int32_t main()
+{
+    int memory_size, OS_size, no_of_partitions, no_of_processes;
+    cout << "\nEnter Memory Size, OS_size :\n";
+    cin >> memory_size >> OS_size;
+
+    int block = 0, cur_mem = memory_size - OS_size;
+    vector<int> block_size;
+    while (1)
+    {
+        cout << "\nEnter block size :";
+        cin >> block;
+        if (cur_mem >= block)
+        {
+            cur_mem -= block;
+            block_size.push_back(block);
+        }
+        else
+        {
+            if (cur_mem > 0)
+                block_size.push_back(cur_mem);
+            cout << "\n-----Complete Memory is divided into " << block_size.size() << " blocks-----\n";
+            break;
+        }
+    }
+    no_of_partitions = block_size.size();
+
+    cout << "\nEnter No. of processes:\n";
+    cin >> no_of_processes;
+
+    int Process[no_of_processes];
+    cout << "\nEnter the " << no_of_processes << " Process sizes\n";
+    for (int i = 0; i < no_of_processes; i++)
+        cin >> Process[i];
+
+    int allocated[no_of_processes];
+    memset(allocated, -1, sizeof(allocated));
+
+    for (int i = 0; i < no_of_processes; i++)
+    {
+        bool alloc = false;
+        for (int j = 0; j < no_of_partitions; j++)
+        {
+            if (allocated[j] == -1 && block_size[j] >= Process[i])
+            {
+                allocated[j] = i;
+                alloc = true;
+                block_size[j] -= Process[i];
+                cout << "\nProcess " << i + 1 << " (size = " << Process[i] << ") is allocated\n";
+                break;
+            }
+        }
+        if (!alloc)
+            cout << "\nProcess " << i + 1 << " (size = " << Process[i] << ") is not allocated\n";
+    }
+
+    cout << "\n---Memory after allocation----\n";
+    for (int i = 0; i < no_of_partitions; i++)
+        cout << "\nBlock " << i + 1 << " size = " << block_size[i] << "\n";
+}
+-----------------------------------------------------------------------------------------------------------------------
+
+
+Q10. Implement the variable partitioning memory management using worst fit, Best-fit and First fit
+contiguous memory allocation techniques. You have to ask the user for total memory, size of OS,
+number of processes and memory requirement for each process. Allocate the memory accordingly
+using each technique. Give the summary of allocation and remaining holes in the memory.
+
+-----------------------------------------------------------------------------------------------------------------------
+#include <bits/stdc++.h>
+using namespace std;
+
+void firstFit(vector<int> blocks, vector<int> &process)
+{
+    cout << "\nMemory before allocation\n";
+    for (int b : blocks)
+        cout << b << " ";
+    cout << "\n";
+
+    vector<int> alloc(process.size(), -1);
+    vector<int> alloc_to(blocks.size(), -1);
+    int i = 0;
+    for (int &p : process)
+    {
+        int j = 0;
+        for (int &b : blocks)
+        {
+            if (b >= p)
+            {
+                b -= p;
+                alloc[i] = j;
+                alloc_to[j] = i;
+                break;
+            }
+            j++;
+        }
+        i++;
+    }
+    cout << "\nProcess No.\tProcess_size\tBlock_no.\tStatus\n";
+    for (int i = 0; i < process.size(); i++)
+    {
+        cout << i + 1 << "\t\t" << process[i] << "\t\t\t";
+        if (alloc[i] != -1)
+            cout << alloc[i] + 1 << "\t\tAllocated\n";
+        else
+            cout << "-\t\tNot Allocated\n";
+    }
+    cout << "\nMemory after allocation\n";
+    for (int b : blocks)
+        cout << b << " ";
+    cout << "\n";
+}
+
+void BestFit(vector<int> blocks, vector<int> &process)
+{
+    cout << "\nMemory before allocation\n";
+    for (int b : blocks)
+        cout << b << " ";
+    cout << "\n";
+
+    vector<int> alloc(process.size(), -1);
+    vector<int> alloc_to(blocks.size(), -1);
+
+    for (int i = 0; i < process.size(); i++)
+    {
+        int bestIdx = -1;
+        for (int j = 0; j < blocks.size(); j++)
+        {
+            if (blocks[j] >= process[i])
+            {
+                if (bestIdx == -1)
+                    bestIdx = j;
+                else if (blocks[bestIdx] > blocks[j])
+                    bestIdx = j;
+            }
+        }
+        if (bestIdx != -1)
+        {
+            alloc[i] = bestIdx;
+            alloc_to[bestIdx] = i;
+            blocks[bestIdx] -= process[i];
+        }
+    }
+
+    cout << "\nProcess No.\tProcess_size\tBlock_no.\tStatus\n";
+    for (int i = 0; i < process.size(); i++)
+    {
+        cout << i + 1 << "\t\t" << process[i] << "\t\t\t";
+        if (alloc[i] != -1)
+            cout << alloc[i] + 1 << "\t\tAllocated\n";
+        else
+            cout << "-\t\tNot Allocated\n";
+    }
+    cout << "\nMemory after allocation\n";
+    for (int b : blocks)
+        cout << b << " ";
+    cout << "\n";
+}
+
+void WorstFit(vector<int> blocks, vector<int> &process)
+{
+    cout << "\nMemory before allocation\n";
+    for (int b : blocks)
+        cout << b << " ";
+    cout << "\n";
+
+    vector<int> alloc(process.size(), -1);
+    vector<int> alloc_to(blocks.size(), -1);
+
+    for (int i = 0; i < process.size(); i++)
+    {
+        int bestIdx = -1;
+        for (int j = 0; j < blocks.size(); j++)
+        {
+            if (blocks[j] >= process[i])
+            {
+                if (bestIdx == -1)
+                    bestIdx = j;
+                else if (blocks[bestIdx] < blocks[j])
+                    bestIdx = j;
+            }
+        }
+        if (bestIdx != -1)
+        {
+            alloc[i] = bestIdx;
+            alloc_to[bestIdx] = i;
+            blocks[bestIdx] -= process[i];
+        }
+    }
+
+    cout << "\nProcess No.\tProcess_size\tBlock_no.\tStatus\n";
+    for (int i = 0; i < process.size(); i++)
+    {
+        cout << i + 1 << "\t\t" << process[i] << "\t\t\t";
+        if (alloc[i] != -1)
+            cout << alloc[i] + 1 << "\t\tAllocated\n";
+        else
+            cout << "-\t\tNot Allocated\n";
+    }
+    cout << "\nMemory after allocation\n";
+    for (int b : blocks)
+        cout << b << " ";
+    cout << "\n";
+}
+
+int main()
+{
+    int process_size, block_size;
+    cout << "\nEnter the no. of blocks : ";
+    cin >> block_size;
+    vector<int> blocks(block_size);
+    cout << "\nEnter the " << block_size << " blocks\n";
+    for (int i = 0; i < block_size; i++)
+        cin >> blocks[i];
+
+    cout << "\nEnter the no. of process : ";
+    cin >> process_size;
+    vector<int> process(process_size);
+    cout << "\nEnter the " << process_size << " process sizes\n";
+    for (int i = 0; i < process_size; i++)
+        cin >> process[i];
+
+    cout << "\n-------------First Fit Algorithm-------------------\n";
+    firstFit(blocks, process);
+
+    cout << "\n-------------Best Fit Algorithm-------------------\n";
+    BestFit(blocks, process);
+
+    cout << "\n-------------Worst Fit Algorithm-------------------\n";
+    WorstFit(blocks, process);
+}
+-----------------------------------------------------------------------------------------------------------------------
+
+
+Q11. Implement all the page replacement techniques (FIFO, OPT, LRU) and display the page faults.
+Ask the user for number of free frames, reference string and then output the no of page faults for
+every algorithm.
+
+-----------------------------------------------------------------------------------------------------------------------
+#include <bits/stdc++.h>
+using namespace std;
+
+int FIFO(string &pages, int f)
+{
+    unordered_set<int> s;
+    queue<int> indexes;
+    int page_faults = 0;
+
+    for (int i = 0; i < pages.size(); i++)
+    {
+        if (s.size() < f)
+        {
+            if (s.find((pages[i] - '0')) == s.end())
+            {
+                s.insert((pages[i] - '0'));
+                page_faults++;
+                indexes.push((pages[i] - '0'));
+            }
+        }
+        else
+        {
+            if (s.find((pages[i] - '0')) == s.end())
+            {
+                int val = indexes.front();
+                indexes.pop();
+                s.erase(val);
+                s.insert((pages[i] - '0'));
+                indexes.push((pages[i] - '0'));
+                page_faults++;
+            }
+        }
+    }
+    return page_faults;
+}
+
+int LRU(string &pages, int frame_size)
+{
+    unordered_set<int> s;
+    unordered_map<int, int> indexes;
+
+    int page_faults = 0;
+    for (int i = 0; i < pages.size(); i++)
+    {
+        if (s.find((pages[i] - '0')) == s.end())
+        {
+            if (s.size() < frame_size)
+            {
+                s.insert((pages[i] - '0'));
+                page_faults++;
+            }
+            else
+            {
+                int lru = INT_MAX, val;
+                for (auto &it : s)
+                {
+                    if (indexes[it] < lru)
+                    {
+                        lru = indexes[it];
+                        val = it;
+                    }
+                }
+                s.erase(val);
+                s.insert((pages[i] - '0'));
+                page_faults++;
+            }
+        }
+        indexes[pages[i] - '0'] = i;
+    }
+    return page_faults;
+}
+
+int OPT(string &pages, int frame_size)
+{
+    vector<int> fr;
+    int page_faults = 0, n = pages.size();
+    for (int i = 0; i < n; i++)
+    {
+        int k;
+        for (k = 0; k < fr.size(); k++)
+            if (fr[k] == (pages[i] - '0'))
+                break;
+        if (k == fr.size())
+        {
+            if (fr.size() < frame_size)
+                fr.push_back((pages[i] - '0'));
+            else
+            {
+                int index = i + 1;
+                int res = -1, farthest = index;
+                for (int l = 0; l < fr.size(); l++)
+                {
+                    int j;
+                    for (j = index; j < n; j++)
+                    {
+                        if (fr[l] == (pages[j] - '0'))
+                        {
+                            if (j > farthest)
+                            {
+                                farthest = j;
+                                res = l;
+                            }
+                            break;
+                        }
+                    }
+                    if (j == n)
+                    {
+                        res = l;
+                        break;
+                    }
+                }
+                fr[res] = (pages[i] - '0');
+            }
+            page_faults++;
+        }
+    }
+    return page_faults;
+}
+
+int main()
+{
+    string ref;
+    cout << "\nEnter the reference string :";
+    cin >> ref;
+    int free_frames;
+    cout << "\nEnter Number of free_frames :";
+    cin >> free_frames;
+
+    int fifo = FIFO(ref, free_frames);
+    int opt = OPT(ref, free_frames);
+    int lru = LRU(ref, free_frames);
+
+    cout << "\nPage faults for FIFO algorithm are : " << fifo;
+    cout << "\nPage faults for OPT algorithm are : " << opt;
+    cout << "\nPage faults for LRU algorithm are : " << lru;
+}
+-----------------------------------------------------------------------------------------------------------------------
+
+
+Q12. Implement the disk scheduling algorithms: FCFS, SCAN, C-SCAN.
+
+#include <bits/stdc++.h>
+using namespace std;
+
+void CSCAN(vector<int> &arr, int head, int disk_size)
+{
+    int seek_count = 0, size = arr.size();
+    int distance, cur_track;
+    vector<int> left, right, seek_sequence;
+    left.push_back(0);
+    right.push_back(disk_size - 1);
+    for (int i = 0; i < size; i++)
+    {
+        if (arr[i] < head)
+            left.push_back(arr[i]);
+        if (arr[i] > head)
+            right.push_back(arr[i]);
+    }
+    sort(left.begin(), left.end());
+    sort(right.begin(), right.end());
+
+    for (int i = 0; i < right.size(); i++)
+    {
+        cur_track = right[i];
+        seek_sequence.push_back(cur_track);
+        distance = abs(cur_track - head);
+        seek_count += distance;
+        head = cur_track;
+    }
+
+    head = 0;
+    seek_count += (disk_size - 1);
+    for (int i = 0; i < left.size(); i++)
+    {
+        cur_track = left[i];
+        seek_sequence.push_back(cur_track);
+        distance = abs(cur_track - head);
+        seek_count += distance;
+        head = cur_track;
+    }
+
+    cout << "\nTotal number of seek operations = " << seek_count << endl;
+    cout << "\nSeek Sequence is" << endl;
+    for (int i = 0; i < seek_sequence.size(); i++)
+        cout << seek_sequence[i] << " ";
+    cout << endl;
+}
+
+void scan(vector<int> &positions, int head, int direction)
+{
+    int n = positions.size();
+    vector<int> done(n + 1), seek_sequence;
+    int movement, best, index, complete;
+    movement = 0;
+    complete = 0;
+    while (complete < n)
+    {
+        index = -1;
+        if (direction == 0)
+            best = INT_MIN;
+        if (direction == 1)
+            best = INT_MAX;
+
+        for (int i = 0; i < n; i++)
+        {
+            if (!done[i])
+            {
+                if (direction == 0 && positions[i] > best && positions[i] < head)
+                {
+                    index = i;
+                    best = positions[i];
+                }
+                if (direction == 1 && positions[i] < best && positions[i] > head)
+                {
+                    index = i;
+                    best = positions[i];
+                }
+            }
+        }
+
+        if (index >= 0)
+        {
+            complete++;
+            done[index] = true;
+            seek_sequence.push_back(positions[index]);
+            movement += abs(head - best);
+            head = positions[index];
+        }
+        else
+        {
+            direction = 1 - direction;
+        }
+    }
+    cout << "\nTotal seek operations : " << movement << "\n";
+    cout << "\nSeek Sequence is" << endl;
+    for (int i = 0; i < seek_sequence.size(); i++)
+        cout << seek_sequence[i] << " ";
+    cout << endl;
+}
+
+void FCFS(vector<int> &arr, int head)
+{
+    int size = arr.size();
+    int seek_count = 0;
+    int distance, cur_track;
+
+    for (int i = 0; i < size; i++)
+    {
+        cur_track = arr[i];
+        distance = abs(cur_track - head);
+        seek_count += distance;
+        head = cur_track;
+    }
+    cout << "\nTotal seek operations = " << seek_count << endl;
+    cout << "\nSeek Sequence :" << endl;
+    for (int i = 0; i < size; i++)
+        cout << arr[i] << " ";
+    cout << endl;
+}
+
+// Driver code
+int main()
+{
+    vector<int> arr = {176, 79, 34, 60, 92, 11, 41, 114};
+    cout << "\n--------------FCFS---------------";
+    FCFS(arr, 53);
+    cout << "\n--------------SCAN---------------";
+    scan(arr, 53, 0);
+    cout << "\n--------------C-SCAN---------------";
+    CSCAN(arr, 53, 200);
+}
+
+
+
+
+
+
